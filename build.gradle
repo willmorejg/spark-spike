@@ -1,0 +1,133 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '2.7.12'
+	id 'io.spring.dependency-management' version '1.0.15.RELEASE'
+	id 'com.diffplug.spotless' version '6.15.0'
+	id 'org.ysb33r.doxygen' version '0.7.0'
+	id 'jacoco'
+	id 'project-report'
+ 	id 'build-dashboard'
+}
+
+group = 'net.ljcomputing'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+   mavenLocal()
+
+    maven {
+        url = uri('http://localhost:8081/repository/maven-central')
+        allowInsecureProtocol = true
+    }
+}
+
+dependencies {
+	// implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
+	implementation 'org.springframework.boot:spring-boot-starter-freemarker'
+
+    implementation 'org.apache.spark:spark-core_2.13:3.4.0'
+    implementation 'org.apache.spark:spark-unsafe_2.13:3.4.0'
+    implementation 'org.apache.spark:spark-sql_2.13:3.4.0'
+
+    // implementation 'org.json:json:20230227'
+
+	implementation 'com.fasterxml.jackson.core:jackson-core:2.13.0'
+	implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.0'
+	implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.13.0'
+
+    implementation 'ch.qos.logback.contrib:logback-json-classic:0.1.5'
+    implementation 'ch.qos.logback.contrib:logback-jackson:0.1.5'
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.3'
+
+	compileOnly 'org.projectlombok:lombok'
+
+	// runtimeOnly 'com.mysql:mysql-connector-j'
+	runtimeOnly 'org.postgresql:postgresql'
+
+	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+ 
+tasks.withType(JavaCompile) {
+  dependsOn spotlessApply
+  options.encoding = 'UTF-8'
+}
+
+bootRun {
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+
+    manifest {
+        attributes (
+          'Main-Class': 'net.ljcomputing.sparkspike.SparkSpikeApplication',
+          'Implementation-Title': 'Apache Spark Spike',
+          'Implementation-Version': version
+        )
+    }
+}
+
+spotless {
+  java {
+    targetExclude("build/**")
+    licenseHeaderFile("$rootProject.projectDir/configuration/spotless/license-header.java").updateYearWithLatest(true)
+    toggleOffOn()
+    trimTrailingWhitespace()
+    endWithNewline()
+    removeUnusedImports()
+    importOrder('java', 'javax', '', '\\#')
+    googleJavaFormat('1.15.0').aosp().reflowLongStrings().groupArtifact('com.google.googlejavaformat:google-java-format')
+  }
+}
+
+javadoc {
+  exclude("build/generated/sources/**/*.java")
+	options.memberLevel = JavadocMemberLevel.PRIVATE
+  failOnError(false)
+}
+
+doxygen {
+  source 'src/main/java'
+  project_name 'Apache Spark Spike'
+  generate_latex true
+  generate_html true
+  optimize_output_java true
+}
+
+test {
+  testLogging.showStandardStreams = true
+  finalizedBy jacocoTestReport
+  useJUnitPlatform()
+}
+
+jacocoTestCoverageVerification {
+  violationRules {
+    rule {
+      limit {
+        counter = 'LINE'
+        value = 'COVEREDRATIO'
+        minimum = 1.0
+      }
+    }
+  }
+}

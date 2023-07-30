@@ -1,0 +1,42 @@
+[
+    {
+        "name": {
+            "givenName": "James",
+            "middleName": "George",
+            "surname": "Willmore",
+            "birthdate": "1968-01-22"
+        }
+    },
+    {
+        "name": {
+            "givenName": "John",
+            "middleName": "Patrick",
+            "surname": "Willmore",
+            "birthdate": "1972-03-17"
+        }
+    },
+    {
+        "name": {
+            "givenName": "Lynn",
+            "middleName": "Ellen",
+            "surname": "Pinard-Willmore",
+            "birthdate": "1958-03-16"
+        }
+    },
+    {
+        "name": {
+            "givenName": "John",
+            "suffix": "Jr",
+            "surname": "Smith",
+            "birthdate": "1970-01-01"
+        }
+    },
+    {
+        "name": {
+            "givenName": "Jane",
+            "middleName": "Juliet",
+            "surname": "Doe",
+            "birthdate": "1980-06-14"
+        }
+    }
+]

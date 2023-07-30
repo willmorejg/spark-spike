@@ -1,0 +1,10 @@
+spark:
+    app-name: Spark Spike
+    master: local[*]
+    data-directory: classpath:data/
+spring:
+  freemarker:
+    suffix: .ftlh
+    cache: false
+    template-loader-path:
+      - classpath:/templates/
