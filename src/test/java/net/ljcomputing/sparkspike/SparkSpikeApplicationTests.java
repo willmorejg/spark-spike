@@ -24,20 +24,17 @@ import static org.apache.spark.sql.functions.expr;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import net.ljcomputing.sparkspike.configuration.ApplicationContextProvider;
-import net.ljcomputing.sparkspike.service.DataProcessingService;
-import net.ljcomputing.sparkspike.service.JsonXmlService;
-import net.ljcomputing.sparkspike.service.ProcessingService;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
@@ -48,6 +45,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Profile;
+import net.ljcomputing.sparkspike.configuration.ApplicationContextProvider;
+import net.ljcomputing.sparkspike.extractor.ExtractorLocatorFactory;
+import net.ljcomputing.sparkspike.service.DataProcessingService;
+import net.ljcomputing.sparkspike.service.JsonService;
+import net.ljcomputing.sparkspike.service.JsonXmlService;
+import net.ljcomputing.sparkspike.service.ProcessingService;
+import net.ljcomputing.sparkspike.utils.DatasetServiceUtils;
 
 @SpringBootTest
 @TestMethodOrder(OrderAnnotation.class)
@@ -58,6 +62,9 @@ class SparkSpikeApplicationTests {
     @Autowired private ProcessingService processingService;
     @Autowired private DataProcessingService dataProcessingService;
     @Autowired private JsonXmlService jsonXmlService;
+    @Autowired private SparkSession sparkSession;
+    @Autowired private ExtractorLocatorFactory extractorLocatorFactory;
+    @Autowired private JsonService jsonService;
 
     @Test
     @Order(1)
@@ -213,5 +220,61 @@ class SparkSpikeApplicationTests {
         addrTypesByState = addrTypesByState.withColumn("total", expr("physical+mailing+billing"));
 
         addrTypesByState.collectAsList().stream().forEach(row -> log.debug("row: {}", row));
+    }
+
+    @Test
+    @Order(200)
+    void testNestedJson() {
+        try {
+            Dataset<Row> df = jsonService.extractJsonToDataset("/home/jim/data/response.json");
+
+            df =
+                    DatasetServiceUtils.timestampToDate(
+                            df,
+                            "effectiveDate",
+                            "expirationDate",
+                            "policyInceptionDate",
+                            "termEffectiveDate",
+                            "termExpirationDate");
+
+            final Map<String, Dataset<Row>> dataframes = new HashMap<>();
+
+            for (final String extractor : extractorLocatorFactory.getExtractors()) {
+                final Dataset<Row> tempDf = extractorLocatorFactory.extract(extractor, df);
+                dataframes.put(extractor, tempDf);
+            }
+
+            df = null;
+
+            for (final Map.Entry<String, Dataset<Row>> entry : dataframes.entrySet()) {
+                log.debug("{}", entry.getKey());
+                entry.getValue().show(false);
+            }
+
+            // Dataset<Row> dfPolicyAccts =
+            //         DatasetServiceUtils.explodeToNewDataset(
+            //                 df, "accounts", "policyNumber", "effectiveDate");
+
+            // Dataset<Row> dfPolicyAccounts =
+            //         DatasetServiceUtils.explodeToNewDataset(
+            //                 dfPolicyAccts,
+            //                 "questionAnswers",
+            //                 "policyNumber",
+            //                 "effectiveDate",
+            //                 "accountNumber",
+            //                 "accountType");
+
+            // final Dataset<Row> xdf =
+            //         dfPolicyAccounts
+            //                 .unionByName(dfPolicyAccts, true)
+            //                 .filter("questionAnswers is null")
+            //                 .drop("questionAnswers");
+
+            // dfPolicyAccts.show(false);
+            // dfPolicyAccounts.show(false);
+            // xdf.show(false);
+        } catch (Exception e) {
+            log.error("ERROR: ", e);
+        }
     }
 }

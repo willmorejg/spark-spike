@@ -38,3 +38,5 @@ out/
 **/src/test/resources/out/
 
 x.csv
+out.txt
+**/test.csv/*
